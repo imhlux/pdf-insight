@@ -12,7 +12,7 @@ const TIMEOUT_MS = 90_000
 // Sends extracted text to our Worker (never to the AI provider directly, the
 // API key lives only on the server) and validates the answer before the UI
 // renders anything.
-export async function analyze(request: AnalyzeRequest): Promise<Insight> {
+export async function analyze(request: AnalyzeRequest, signal?: AbortSignal): Promise<Insight> {
   if (!API_URL) throw new AppError('config')
 
   let response: Response
@@ -21,7 +21,10 @@ export async function analyze(request: AnalyzeRequest): Promise<Insight> {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(request),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      // Ends on whichever comes first: the user's "Anuluj" or the timeout.
+      signal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(TIMEOUT_MS)])
+        : AbortSignal.timeout(TIMEOUT_MS),
     })
   } catch (error) {
     const isTimeout = error instanceof DOMException && error.name === 'TimeoutError'
