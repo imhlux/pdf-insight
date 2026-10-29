@@ -21,8 +21,11 @@ import {
 
 export interface AnalyzeConfig {
   apiKey: string
-  model: string
+  models: string[]
 }
+
+// Collects which models actually answered (fallbacks can differ per call).
+type UsedModels = Set<string>
 
 const reduceSchema = aiResultSchema.pick({
   document: true,
@@ -58,6 +61,7 @@ function parseJson(raw: string): unknown {
 async function askValidated<T>(
   schema: z.ZodType<T>,
   config: AnalyzeConfig,
+  used: UsedModels,
   system: string,
   parts: Part[],
 ): Promise<T> {
@@ -65,7 +69,8 @@ async function askValidated<T>(
   const jsonSchema = toGeminiSchema(schema)
 
   for (let attempt = 1; attempt <= 2; attempt++) {
-    const raw = await generateJson({ ...config, system, contents, jsonSchema })
+    const { text: raw, model } = await generateJson({ ...config, system, contents, jsonSchema })
+    used.add(model)
     const result = schema.safeParse(normalizeAiResult(parseJson(raw)))
     if (result.success) return result.data
 
@@ -82,10 +87,11 @@ async function analyzeChunks(
   chunks: string[],
   imageParts: Part[],
   config: AnalyzeConfig,
+  used: UsedModels,
 ): Promise<AiResult> {
   if (chunks.length <= 1) {
     const parts: Part[] = [{ text: documentPrompt(chunks[0] ?? '') }, ...imageParts]
-    return askValidated(aiResultSchema, config, SYSTEM_INSTRUCTION, parts)
+    return askValidated(aiResultSchema, config, used, SYSTEM_INSTRUCTION, parts)
   }
 
   // Long document: analyse fragments in parallel (map), then let the model
@@ -98,7 +104,7 @@ async function analyzeChunks(
         { text: documentPrompt(chunk, { index: i + 1, total: chunks.length }) },
         ...(isLast ? imageParts : []),
       ]
-      return askValidated(aiResultSchema, config, SYSTEM_INSTRUCTION, parts)
+      return askValidated(aiResultSchema, config, used, SYSTEM_INSTRUCTION, parts)
     }),
   )
 
@@ -108,7 +114,7 @@ async function analyzeChunks(
     keyPoints,
     keywords,
   }))
-  const reduced = await askValidated(reduceSchema, config, REDUCE_INSTRUCTION, [
+  const reduced = await askValidated(reduceSchema, config, used, REDUCE_INSTRUCTION, [
     { text: JSON.stringify(digest) },
   ])
 
@@ -133,7 +139,8 @@ export async function analyzeDocument(
       ]
     : []
 
-  const result = await analyzeChunks(chunks, imageParts, config)
+  const used: UsedModels = new Set()
+  const result = await analyzeChunks(chunks, imageParts, config, used)
 
   const ocrPages = request.images.map((img) => img.page)
   const emptyPages = request.pages
@@ -162,7 +169,7 @@ export async function analyzeDocument(
     ...result,
     document: { ...result.document, fileName: request.fileName, pages: request.pages.length },
     analysis: {
-      model: config.model,
+      model: [...used].join(', '),
       chunks: Math.max(chunks.length, 1),
       ocrPages,
       warnings,

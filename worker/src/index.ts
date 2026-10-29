@@ -4,7 +4,7 @@ import { HttpError, allowedOrigin, corsHeaders, errorResponse, json } from './ht
 
 export interface Env {
   GEMINI_API_KEY: string
-  GEMINI_MODEL: string
+  GEMINI_MODELS: string
   ALLOWED_ORIGINS: string
   RATE_LIMITER: RateLimit
 }
@@ -38,7 +38,7 @@ async function handleAnalyze(request: Request, env: Env): Promise<Response> {
 
   const insight = await analyzeDocument(parsed.data, {
     apiKey: env.GEMINI_API_KEY,
-    model: env.GEMINI_MODEL,
+    models: env.GEMINI_MODELS.split(',').map((m) => m.trim()),
   })
   return json(insight, 200)
 }
