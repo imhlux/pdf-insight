@@ -34,8 +34,9 @@ Rules:
 - keywords: 3 to 10 keywords for the whole document.`
 
 export function documentPrompt(text: string, part?: { index: number; total: number }): string {
-  // Neutralise anything that would close our wrapper tag early.
-  const safeText = text.replace(/<\/?document>/gi, '[tag usunięty]')
+  // Neutralise anything that looks like our wrapper tag (also with spaces or
+  // attributes), so the document cannot close the tag early and "escape".
+  const safeText = text.replace(/<\s*\/?\s*document\b[^>]*>/gi, '[tag usunięty]')
   const scope = part
     ? `This is fragment ${part.index} of ${part.total} of one longer document. Analyse only this fragment.\n`
     : ''
