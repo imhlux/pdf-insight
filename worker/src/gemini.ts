@@ -15,7 +15,8 @@ interface GeminiResponse {
 }
 
 const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models'
-const TIMEOUT_MS = 45_000
+// Short per-model timeout: a hanging model should hand over to the next one quickly.
+const TIMEOUT_MS = 25_000
 
 // Free-tier models are sometimes overloaded (503), out of quota (429) or
 // retired (404). In those cases the next model from the list is tried.
@@ -46,6 +47,9 @@ async function callModel(options: GenerateOptions, model: string): Promise<Respo
         temperature: 0.1,
         responseMimeType: 'application/json',
         responseJsonSchema: options.jsonSchema,
+        // Extraction does not need long reasoning, and default thinking made
+        // a 12-page contract take over 25 s. Low thinking keeps it fast.
+        thinkingConfig: { thinkingLevel: 'low' },
       },
     }),
   })
@@ -59,7 +63,8 @@ export async function generateJson(options: GenerateOptions): Promise<GenerateRe
     let response: Response
     try {
       response = await callModel(options, model)
-    } catch {
+    } catch (error) {
+      console.error('Gemini request failed', model, error instanceof Error ? error.name : error)
       lastError = new HttpError(502, 'ai_unavailable') // network error or timeout
       continue
     }
