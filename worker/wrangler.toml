@@ -1,0 +1,19 @@
+name = "pdf-insight-api"
+main = "src/index.ts"
+compatibility_date = "2026-10-01"
+
+[vars]
+GEMINI_MODEL = "gemini-2.5-flash"
+# Only the GitHub Pages demo may call the API. Local dev overrides this in .dev.vars.
+ALLOWED_ORIGINS = "https://GITHUB_USER.github.io"
+
+# GEMINI_API_KEY is a secret: `npx wrangler secret put GEMINI_API_KEY --config worker/wrangler.toml`
+
+# 5 analyses per minute per IP address.
+[[ratelimits]]
+name = "RATE_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 5
+  period = 60
