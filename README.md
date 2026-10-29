@@ -23,8 +23,9 @@ pdf.js, walidacja Zod                         klucz w sekretach,
 
 ```
 src/
-  components/   widoki: Dropzone, LoadingState, ErrorState, ResultView, JsonPreview, HistoryList
-  lib/          pdf.js, walidacja pliku, historia, formatowanie, komunikaty błędów
+  components/   widoki: Dropzone, LoadingState, ErrorState, ResultView, JsonPreview, HistoryList, ErrorBoundary
+  hooks/        useAnalysis: cały przepływ plik → tekst → AI → wynik, z anulowaniem
+  lib/          maszyna stanów (reducer), pdf.js, walidacja pliku, historia, formatowanie, komunikaty błędów
   api/          klient API (fetch + walidacja odpowiedzi)
 shared/         kod wspólny dla aplikacji i Workera: schemat Zod, normalizacja, chunking, detektor prompt injection (+ testy)
 worker/         Cloudflare Worker: CORS, rate limit, wywołanie Gemini, retry
@@ -32,17 +33,18 @@ worker/         Cloudflare Worker: CORS, rate limit, wywołanie Gemini, retry
 
 ### Podjęte decyzje
 
-| Decyzja                               | Dlaczego                                                                                                                                                                                                               |
-| ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cloudflare Workers jako backend       | Darmowy plan wystarcza na 14 dni demo, sekrety poza repozytorium, wbudowany rate limiting, start w kilka ms.                                                                                                           |
-| Gemini (lista modeli z fallbackiem)   | Darmowy limit API, natywny tryb JSON ze schematem, dobry polski. Darmowe modele bywają przeciążone (503) albo wycofywane (404), więc Worker próbuje kolejnych modeli z listy `GEMINI_MODELS`.                          |
-| `thinkingLevel: low`                  | Przy domyślnym poziomie rozumowania 12-stronicowa umowa przekraczała 25 s. Ekstrakcja nie potrzebuje długiego rozumowania, teraz trwa 7–17 s.                                                                          |
-| Jeden schemat Zod w `shared/`         | Ta sama definicja waliduje odpowiedź w Workerze i w przeglądarce. Z niej generowany jest też JSON Schema dla Gemini.                                                                                                   |
-| `fileName` i `pages` liczone w kodzie | Model nie ma szansy się pomylić w danych, które znamy bez AI.                                                                                                                                                          |
-| Długie dokumenty: map-reduce          | Tekst dzielony po stronach na fragmenty do 60 000 znaków. Fragmenty analizowane równolegle, listy (kwoty, daty, podmioty) łączone w kodzie z deduplikacją, podsumowanie dla całości pisze model z wyników częściowych. |
-| OCR przez model multimodalny          | Bez dodatkowej biblioteki (Tesseract to kilka MB i wolne działanie w przeglądarce). Gemini czyta obraz strony w tym samym wywołaniu.                                                                                   |
-| Bez routera                           | Aplikacja ma jeden ekran ze stanami, więc problem routingu na GitHub Pages (HashRouter / 404.html) nie występuje.                                                                                                      |
-| pdf.js ładowany leniwie               | Biblioteka waży ok. 430 kB, więc pobiera się dopiero przy pierwszym pliku.                                                                                                                                             |
+| Decyzja                                | Dlaczego                                                                                                                                                                                                                                                                                                                                            |
+| -------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cloudflare Workers jako backend        | Darmowy plan wystarcza na 14 dni demo, sekrety poza repozytorium, wbudowany rate limiting, start w kilka ms.                                                                                                                                                                                                                                        |
+| Gemini, kilka modeli i hedged requests | Darmowy limit API, natywny tryb JSON ze schematem, dobry polski. Darmowe modele bywają przeciążone (503), zawieszają się albo są wycofywane (404). Worker startuje pierwszy model z listy `GEMINI_MODELS`. Jeśli ten nie odpowie w 12 s albo zwróci błąd, równolegle startuje następny. Wygrywa pierwsza odpowiedź, pozostałe żądania są anulowane. |
+| `thinkingLevel: low`                   | Przy domyślnym poziomie rozumowania 12-stronicowa umowa przekraczała 25 s. Ekstrakcja nie potrzebuje długiego rozumowania, teraz trwa zwykle 5–17 s.                                                                                                                                                                                                |
+| Logika poza komponentami               | Stany ekranu (pusty, ładowanie, błąd, wynik) to czysty reducer z testami. Przepływ jest w hooku `useAnalysis`, a `App.tsx` tylko renderuje. „Anuluj” przerywa żądanie przez `AbortController`.                                                                                                                                                      |
+| Jeden schemat Zod w `shared/`          | Ta sama definicja waliduje odpowiedź w Workerze i w przeglądarce. Z niej generowany jest też JSON Schema dla Gemini.                                                                                                                                                                                                                                |
+| `fileName` i `pages` liczone w kodzie  | Model nie ma szansy się pomylić w danych, które znamy bez AI.                                                                                                                                                                                                                                                                                       |
+| Długie dokumenty: map-reduce           | Tekst dzielony po stronach na fragmenty do 60 000 znaków. Fragmenty analizowane równolegle, listy (kwoty, daty, podmioty) łączone w kodzie z deduplikacją, podsumowanie dla całości pisze model z wyników częściowych.                                                                                                                              |
+| OCR przez model multimodalny           | Bez dodatkowej biblioteki (Tesseract to kilka MB i wolne działanie w przeglądarce). Gemini czyta obraz strony w tym samym wywołaniu.                                                                                                                                                                                                                |
+| Bez routera                            | Aplikacja ma jeden ekran ze stanami, więc problem routingu na GitHub Pages (HashRouter / 404.html) nie występuje.                                                                                                                                                                                                                                   |
+| pdf.js ładowany leniwie                | Biblioteka waży ok. 430 kB, więc pobiera się dopiero przy pierwszym pliku.                                                                                                                                                                                                                                                                          |
 
 ### Bezpieczeństwo
 
@@ -81,12 +83,12 @@ npm run dev
 
 ### Skrypty
 
-| Komenda             | Co robi                                                                       |
-| ------------------- | ----------------------------------------------------------------------------- |
-| `npm run lint`      | ESLint (bez `any`, bez `console.log`) i Prettier                              |
-| `npm run typecheck` | TypeScript strict dla aplikacji, Workera i konfiguracji                       |
-| `npm test`          | Vitest: walidacja schematu, normalizacja, chunking, detektor prompt injection |
-| `npm run build`     | Build produkcyjny do `dist/`                                                  |
+| Komenda             | Co robi                                                                                                                  |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `npm run lint`      | ESLint (bez `any`, bez `console.log`) i Prettier                                                                         |
+| `npm run typecheck` | TypeScript strict dla aplikacji, Workera i konfiguracji                                                                  |
+| `npm test`          | Vitest: walidacja schematu, normalizacja, chunking, detektor prompt injection, reducer stanów, fallback i hedging modeli |
+| `npm run build`     | Build produkcyjny do `dist/`                                                                                             |
 
 ## CI/CD
 
@@ -96,7 +98,7 @@ GitHub Actions (`.github/workflows/deploy.yml`): **lint + typecheck + testy → 
 
 - **OCR** obejmuje maksymalnie 4 strony bez warstwy tekstowej. Pozostałe są pomijane z ostrzeżeniem w wyniku.
 - **Darmowy plan Gemini** ma niskie limity i bywa przeciążony. Wtedy analiza trwa dłużej albo kończy się komunikatem z opcją ponowienia. Fallback na kolejne modele zmniejsza to ryzyko, ale go nie usuwa.
-- **Czas odpowiedzi** zależy od obciążenia API: dla umowy testowej (12 stron) 7–17 s.
+- **Czas odpowiedzi** zależy od obciążenia API: dla umowy testowej (12 stron) zwykle 5–17 s. Przy dużym obciążeniu hedging ogranicza czekanie na zawieszony model do 12 s, ale gdy przeciążone są wszystkie modele, analiza może przekroczyć 30 s.
 - **Rate limit** liczony jest per lokalizacja Cloudflare, więc jest przybliżony. CORS chroni przed innymi stronami w przeglądarce, ale nie przed skryptem, który podrobi nagłówek `Origin`. Przed nadużyciem chroni wtedy tylko rate limit.
 - **Liczba zdań** w podsumowaniu (3–5) jest wymuszana promptem, nie walidacją. Liczenie zdań w tekście ze skrótami („sp. z o.o.”) dawałoby fałszywe błędy.
 - **Pliki zaszyfrowane hasłem** nie są obsługiwane (komunikat dla użytkownika).
