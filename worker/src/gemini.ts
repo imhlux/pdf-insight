@@ -21,10 +21,11 @@ const TIMEOUT_MS = 25_000
 // parallel and the first answer wins ("hedged requests").
 const HEDGE_AFTER_MS = 12_000
 
-// Free-tier models are sometimes overloaded (503), out of quota (429) or
-// retired (404). In those cases another model can still answer. Other
-// errors (400 bad request, 403 bad key) would fail the same way everywhere.
-const RETRYABLE_STATUSES = new Set([404, 429, 500, 503, 504])
+// A bad or blocked API key fails the same way for every model, so trying the
+// next one makes no sense. Everything else (overloaded 503, quota 429,
+// retired 404, a parameter one model does not support 400) can still be
+// answered by another model.
+const FATAL_STATUSES = new Set([401, 403])
 
 export interface GenerateOptions {
   apiKey: string
@@ -88,7 +89,7 @@ async function tryModel(
       response.status === 429
         ? new HttpError(429, 'ai_quota')
         : new HttpError(502, 'ai_unavailable')
-    throw new ModelError(httpError, !RETRYABLE_STATUSES.has(response.status))
+    throw new ModelError(httpError, FATAL_STATUSES.has(response.status))
   }
 
   const data: GeminiResponse = await response.json()

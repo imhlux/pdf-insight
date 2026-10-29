@@ -5,7 +5,10 @@ compatibility_date = "2026-10-01"
 [vars]
 # Started in this order. The next model starts when the previous one fails
 # (overloaded, out of quota, retired) or has not answered for 12 s.
-GEMINI_MODELS = "gemini-3-flash-preview,gemini-3.5-flash,gemini-3.8-flash,gemini-flash-latest"
+# Free tier: 20 requests per day per quota group. Checked with 429 responses:
+# 3.6-flash shares the quota of 3.5-flash, and 3.7-flash / flash-latest share
+# the quota of 3.8-flash, so each model below is a separate group.
+GEMINI_MODELS = "gemini-3-flash-preview,gemini-3.5-flash,gemini-3.8-flash,gemini-3.5-flash-lite"
 # Only the GitHub Pages demo may call the API. Local dev overrides this in .dev.vars.
 ALLOWED_ORIGINS = "https://imhlux.github.io"
 

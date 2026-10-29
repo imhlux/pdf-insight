@@ -72,6 +72,15 @@ describe('generateJson', () => {
     expect(signals['model-a']?.aborted).toBe(true)
   })
 
+  it('tries the next model when one rejects the request (400)', async () => {
+    const { calls } = mockModels({
+      'model-a': () => new Response('unsupported field', { status: 400 }),
+      'model-b': () => ok('{"b":1}'),
+    })
+    await expect(generateJson(options)).resolves.toMatchObject({ model: 'model-b' })
+    expect(calls).toEqual(['model-a', 'model-b'])
+  })
+
   it('stops at once on an error another model cannot fix', async () => {
     const { calls } = mockModels({ 'model-a': () => new Response('bad key', { status: 403 }) })
     await expect(generateJson(options)).rejects.toMatchObject({ code: 'ai_unavailable' })
