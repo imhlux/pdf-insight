@@ -18,7 +18,7 @@ EXTRACTION RULES:
 - document.date: the date the document was issued or signed, ISO 8601 (YYYY-MM-DD), else null.
 - summary: 3 to 5 full sentences in the document's language. State the parties, the subject, the key money terms and the period when the document has them.
 - keyPoints: 3 to 7 short, concrete points in the document's language (numbers, deadlines, obligations).
-- entities.organizations: full names of companies and institutions. entities.people: full names of real persons. No roles, no e-mail addresses.
+- entities.organizations: only legal entities and public institutions (for example names with sp. z o.o., S.A., GmbH, Ltd). Names of software products, platforms or systems (an ERP, an e-mail or office suite) are NOT organizations, even if they contain a vendor name. entities.people: full names of real persons. No roles, no e-mail addresses.
 - amounts: every distinct monetary amount that matters (prices, fees, totals, penalties, budgets). value is a JSON number in major units with a dot as decimal separator (184 500,00 zł -> 184500). currency is ISO 4217 (zł -> PLN). context: a few words saying what the amount is. Percentages are not amounts. Do not convert currencies.
 - dates: important full dates with context (deadlines, periods, meetings), ISO 8601 YYYY-MM-DD. Skip dates without a day.
 - keywords: 3 to 10 short topic keywords.

@@ -155,13 +155,11 @@ export async function analyzeDocument(
   }
   if (ocrPages.length) {
     warnings.push(
-      `Strony bez warstwy tekstowej (${ocrPages.join(', ')}) odczytano z obrazu. Sprawdź dane z tych stron.`,
+      `Odczytano z obrazu strony bez warstwy tekstowej: ${ocrPages.join(', ')}. Sprawdź dane z tych stron.`,
     )
   }
   if (emptyPages.length) {
-    warnings.push(
-      `Strony ${emptyPages.join(', ')} nie mają warstwy tekstowej i nie zostały przeanalizowane.`,
-    )
+    warnings.push(`Nie przeanalizowano stron bez warstwy tekstowej: ${emptyPages.join(', ')}.`)
   }
 
   // Final check of the full contract before anything leaves the Worker.
