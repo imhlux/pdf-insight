@@ -7,6 +7,6 @@ export default defineConfig({
   base: '/pdf-insight/',
   plugins: [react()],
   test: {
-    include: ['shared/**/*.test.ts', 'src/**/*.test.ts'],
+    include: ['shared/**/*.test.ts', 'src/**/*.test.ts', 'worker/**/*.test.ts'],
   },
 })
