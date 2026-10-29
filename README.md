@@ -97,7 +97,7 @@ GitHub Actions (`.github/workflows/deploy.yml`): **lint + typecheck + testy → 
 ## Znane ograniczenia
 
 - **OCR** obejmuje maksymalnie 4 strony bez warstwy tekstowej. Pozostałe są pomijane z ostrzeżeniem w wyniku.
-- **Darmowy plan Gemini** ma limit 20 zapytań dziennie na model i bywa przeciążony. Worker korzysta z kilku modeli, każdy ma osobny limit, więc demo obsłuży kilkadziesiąt analiz dziennie. Przy większym ruchu wystarczy włączyć płatny plan w Google AI Studio, bez zmian w kodzie. Gdy limit się skończy, użytkownik dostaje komunikat z opcją ponowienia.
+- **Darmowy plan Gemini** ma limit 20 zapytań dziennie na model i bywa przeciążony. Kilka modeli dzieli jeden limit (sprawdzone na odpowiedziach 429), więc Worker używa po jednym modelu z każdej grupy limitów: 4 grupy, ok. 80 analiz dziennie. Przy większym ruchu wystarczy włączyć płatny plan w Google AI Studio, bez zmian w kodzie. Gdy limit się skończy, użytkownik dostaje komunikat z opcją ponowienia.
 - **Czas odpowiedzi** zależy od obciążenia API: dla umowy testowej (12 stron) zwykle 5–17 s. Przy dużym obciążeniu hedging ogranicza czekanie na zawieszony model do 12 s, ale gdy przeciążone są wszystkie modele, analiza może przekroczyć 30 s.
 - **Rate limit** liczony jest per lokalizacja Cloudflare, więc jest przybliżony. CORS chroni przed innymi stronami w przeglądarce, ale nie przed skryptem, który podrobi nagłówek `Origin`. Przed nadużyciem chroni wtedy tylko rate limit.
 - **Liczba zdań** w podsumowaniu (3–5) jest wymuszana promptem, nie walidacją. Liczenie zdań w tekście ze skrótami („sp. z o.o.”) dawałoby fałszywe błędy.
