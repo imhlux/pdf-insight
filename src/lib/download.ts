@@ -11,6 +11,9 @@ export function downloadJson(insight: Insight): void {
   const link = document.createElement('a')
   link.href = url
   link.download = jsonFileName(insight.document.fileName)
+  document.body.append(link)
   link.click()
-  URL.revokeObjectURL(url)
+  link.remove()
+  // Revoking right after click() can cancel the download in some browsers.
+  setTimeout(() => URL.revokeObjectURL(url), 1000)
 }

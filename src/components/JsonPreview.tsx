@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Insight } from '../../shared/schema'
 import { downloadJson, jsonFileName } from '../lib/download'
 
@@ -10,11 +10,18 @@ export function JsonPreview({ insight }: Props) {
   const [copied, setCopied] = useState(false)
   const json = JSON.stringify(insight, null, 2)
 
+  // Hide "Skopiowano" after 2 s. The cleanup stops the timer if the user
+  // leaves the view earlier.
+  useEffect(() => {
+    if (!copied) return
+    const timer = setTimeout(() => setCopied(false), 2000)
+    return () => clearTimeout(timer)
+  }, [copied])
+
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(json)
       setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
     } catch {
       setCopied(false)
     }
