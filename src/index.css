@@ -63,6 +63,11 @@ h3 {
   outline-offset: 2px;
 }
 
+/* Headings get focus from code (for screen readers), not from the user. */
+[tabindex='-1']:focus {
+  outline: none;
+}
+
 .app {
   max-width: 960px;
   margin: 0 auto;
