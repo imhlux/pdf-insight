@@ -39,7 +39,8 @@ const MESSAGES: Record<ErrorCode, string> = {
   forbidden_origin: 'Ta strona nie ma dostępu do API analizy.',
   payload_too_large: 'Dokument ma za dużo tekstu do analizy (limit to ok. 300 000 znaków).',
   rate_limited: 'Za dużo analiz w krótkim czasie. Odczekaj minutę i spróbuj ponownie.',
-  ai_quota: 'Wyczerpano chwilowo limit darmowego API AI. Spróbuj ponownie za minutę.',
+  ai_quota:
+    'Wyczerpano limit darmowego API AI. Spróbuj ponownie za kilka minut. Jeśli błąd się powtarza, skończył się limit dzienny.',
   ai_unavailable: 'Usługa AI jest chwilowo niedostępna. Spróbuj ponownie.',
   ai_invalid_response:
     'Model AI dwa razy zwrócił dane niezgodne ze schematem. Spróbuj ponownie lub użyj innego pliku.',

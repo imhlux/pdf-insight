@@ -150,7 +150,7 @@ export async function analyzeDocument(
   const warnings: string[] = []
   if (detectPromptInjection(request.pages.join('\n'))) {
     warnings.push(
-      'Dokument zawiera fragment, który wygląda na polecenie dla systemu AI (prompt injection). Potraktowano go jako zwykły tekst i nie wykonano.',
+      'Dokument zawiera fragment, który wygląda na polecenie dla systemu AI (prompt injection). Model ma instrukcję, by traktować go jako zwykły tekst. Sprawdź, czy wynik zgadza się z dokumentem.',
     )
   }
   if (ocrPages.length) {

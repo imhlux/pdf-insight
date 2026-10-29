@@ -3,7 +3,8 @@ main = "src/index.ts"
 compatibility_date = "2026-10-01"
 
 [vars]
-# Tried in order: the next one is used when a model is overloaded, out of quota or retired.
+# Started in this order. The next model starts when the previous one fails
+# (overloaded, out of quota, retired) or has not answered for 12 s.
 GEMINI_MODELS = "gemini-3-flash-preview,gemini-3.5-flash,gemini-3.8-flash,gemini-flash-latest"
 # Only the GitHub Pages demo may call the API. Local dev overrides this in .dev.vars.
 ALLOWED_ORIGINS = "https://imhlux.github.io"
